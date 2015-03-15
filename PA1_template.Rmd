@@ -7,6 +7,8 @@ output:
 
 
 ## Loading and preprocessing the data
+The data was downloaded, unzipped, and loaded into data frame `data` by the
+following code:
 ```{r}
 data <- read.csv(unz("activity.zip", "activity.csv"), na.strings = "NA")
 data$date <- as.Date(as.character(data$date), "%Y-%m-%d")
@@ -24,21 +26,33 @@ abline(v=mean(steps), col="blue", lwd=2)
 abline(v=median(steps), col="green3", lwd=2, lty=2)
 legend("topright", c("mean", "median"), col=c("blue", "green3"), 
        lty=c(1, 2), lwd=c(2, 2), bty="n")
-mean(steps)
-median(steps)
 ```
+
+The mean number of steps per day is `r round(mean(steps), digits=0)`, and the 
+median is `r median(steps)`.
 
 
 ## What is the average daily activity pattern?
+The average daily activiy pattern is represented by the mean of the values of 
+each interval across all days of the study.
 ```{r}
 pattern <- tapply(data$steps, data$interval, mean, na.rm = T)
 plot(pattern, type = "l")
-pattern[which.max(pattern)]
+abline(v=which.max(as.vector(pattern)), col="blue", lwd=2)
+legend("topright", "maximum", col="blue", lty=1, lwd=2, bty="n")
+library(lubridate)
 ```
 
+The `r which.max(as.vector(pattern))`th 5-minute interval (representing `r strptime(as.character(as.character(names(which.max(pattern)))
+), "%H%M")`), on average across all
+days, contains the maximum number of steps, being 
+`r round(max(pattern), digits=0)` steps.
 
 ## Imputing missing values
-
+There are a total of `r sum(is.na(data))` missing values (i.e., coded as `NA`) 
+in the dataset. In order to minimize the effect of this missing data, the 
+analysis shall impute missing data by taking the mean of the step values of the
+intervals before and after the missiing interval.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
