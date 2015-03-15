@@ -7,18 +7,18 @@ output:
 
 
 ## Loading and preprocessing the data
-The data was downloaded, unzipped, and loaded into data frame `data` by the
-following code:
+The data is unzipped and loaded into data frame `activity` by the following code:
 ```{r}
-data <- read.csv(unz("activity.zip", "activity.csv"), na.strings = "NA")
-data$date <- as.Date(as.character(data$date), "%Y-%m-%d")
-str(data)
+activity <- read.csv(unz("activity.zip", "activity.csv"), na.strings="NA")
+activity$date <- as.Date(as.character(activity$date), "%Y-%m-%d")
+activity$interval <- as.factor(activity$interval)
+str(activity)
 ```
 
 
 ## What is mean total number of steps taken per day?
 ```{r}
-steps <- tapply(data$steps, data$date, sum, na.rm = T)
+steps <- tapply(activity$steps, activity$date, sum, na.rm=TRUE)
 hist(steps, breaks=20, col="lightgreen", xlab="Steps", 
      main="Total Number of Steps Taken Per Day")
 rug(jitter(steps, amount=100))
@@ -33,26 +33,64 @@ median is `r median(steps)`.
 
 
 ## What is the average daily activity pattern?
-The average daily activiy pattern is represented by the mean of the values of 
+The average daily activity pattern is represented by the mean of the values of 
 each interval across all days of the study.
 ```{r}
-pattern <- tapply(data$steps, data$interval, mean, na.rm = T)
-plot(pattern, type = "l")
+pattern <- tapply(activity$steps, activity$interval, mean, na.rm=TRUE)
+plot(pattern, type="l", 
+     xlab="Time Interval",
+     ylab="Mean Number of Steps per Time Interval",
+     main="Average Daily Steps per 5 Minute Interval")
 abline(v=which.max(as.vector(pattern)), col="blue", lwd=2)
 legend("topright", "maximum", col="blue", lty=1, lwd=2, bty="n")
-library(lubridate)
 ```
 
-The `r which.max(as.vector(pattern))`th 5-minute interval (representing `r strptime(as.character(as.character(names(which.max(pattern)))
-), "%H%M")`), on average across all
+The `r which.max(as.vector(pattern))`th 5-minute interval, on average across all
 days, contains the maximum number of steps, being 
 `r round(max(pattern), digits=0)` steps.
 
 ## Imputing missing values
-There are a total of `r sum(is.na(data))` missing values (i.e., coded as `NA`) 
+There are a total of `r sum(is.na(activity))` missing values (i.e., coded as `NA`) 
 in the dataset. In order to minimize the effect of this missing data, the 
-analysis shall impute missing data by taking the mean of the step values of the
-intervals before and after the missiing interval.
+analysis shall impute missing data by replacing the missing values with the 
+median of the step values for the same time interval on days with valid data.
+I've adapted the method shown in the forum post at 
+https://class.coursera.org/repdata-012/forum/thread?thread_id=40#post-263.
+```{r}
+# First calculate the median number of steps per interval for all days
+interval_median <- aggregate(steps ~ interval, data=activity, median)
 
+# Rename the "steps" column to make the merge and imputation easier
+names(interval_median)[2] <- "imputed"
+
+# Merge the activity and inerval median data frames by interval
+imputed_activity <- merge(activity, interval_median, by="interval")
+
+# Replace missing steps values with the imputed value
+imputed_activity$steps[is.na(imputed_activity$steps)] <- 
+        imputed_activity$imputed[is.na(imputed_activity$steps)]
+
+# Remove the column containing the medians, as it is no longer needed
+imputed_activity$imputed <- NULL
+
+# Plot, as previously.
+imputed_steps <- tapply(imputed_activity$steps, imputed_activity$date, sum)
+hist(imputed_steps, breaks=20, col="lightgreen", xlab="Steps", 
+     main="Total Number of Steps Taken Per Day",
+     sub="(Missing data replaced with median over all days for that interval)")
+rug(jitter(imputed_steps, amount=100))
+abline(v=mean(imputed_steps), col="blue", lwd=2)
+abline(v=median(imputed_steps), col="green3", lwd=2, lty=2)
+legend("topright", c("mean", "median"), col=c("blue", "green3"), 
+       lty=c(1, 2), lwd=c(2, 2), bty="n")
+
+```
+
+The mean number of steps per day with missing data imputed is 
+`r round(mean(steps), digits=0)`, and the median is `r median(steps)`, compared
+with the mean of `r round(mean(steps), digits=0)` and median of`r median(steps)`
+from the original data set with missing data. This shows that the mean and median
+values were not impacted by this imputation strategy.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
