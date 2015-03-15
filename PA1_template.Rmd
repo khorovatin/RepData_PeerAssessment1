@@ -132,7 +132,21 @@ imputed_activity <- mutate(imputed_activity,
 summary(imputed_activity)
 ```
 
-### 2. Make a panel plot of the data averaged accross the week parts
-```{r}
+### 2. Make a panel plot of the data averaged across the week parts
+```{r weekpart_pattern}
 suppressMessages(library(lattice))
 
+# Group the data by weekday/weekend and interval
+imputed_pattern <- group_by(imputed_activity, weekpart, interval)
+
+# Get the mean accross the groups
+imputed_pattern <- summarize(imputed_pattern, steps=mean(steps))
+
+# Create a list of x-axis ticks to use to clean up the graph
+at <- seq(0, max(as.numeric(imputed_pattern$interval)), by=50)
+
+# Plot in two panels, one for each week part
+xyplot(steps ~ interval|weekpart, data=imputed_pattern, 
+       type="l", xlab="Interval", ylab="Number of Steps", 
+       main="Activity Patterns on Week Days and Weekends", 
+       layout=c(1, 2), scales=list(at=at))
